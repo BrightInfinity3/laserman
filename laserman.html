@@ -3928,6 +3928,10 @@
 
       peer = new Peer('laserman-' + roomCode, {
         debug: 0,
+        config: { iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]}
       });
 
       peer.on('open', () => {
@@ -3948,9 +3952,14 @@
           cleanupPeer();
           hostGame();
         } else {
-          document.getElementById('online-host-status').textContent = 'CONNECTION ERROR';
+          document.getElementById('online-host-status').textContent = err.type === 'network' ? 'SERVER UNREACHABLE' : 'CONNECTION ERROR';
           document.getElementById('online-host-status').style.color = 'var(--red)';
         }
+      });
+
+      peer.on('disconnected', () => {
+        // Lost connection to signaling server — try to reconnect
+        if (peer && !peer.destroyed) peer.reconnect();
       });
     }
 
@@ -3970,12 +3979,20 @@
         return;
       }
       document.getElementById('join-error').textContent = '';
-      document.getElementById('join-status').textContent = 'CONNECTING...';
+      document.getElementById('join-status').textContent = 'REACHING SERVER...';
+      document.getElementById('join-status').style.color = 'var(--amber)';
       onlineRole = 'joiner';
 
-      peer = new Peer(undefined, { debug: 0 });
+      peer = new Peer(undefined, {
+        debug: 0,
+        config: { iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]}
+      });
 
       peer.on('open', () => {
+        document.getElementById('join-status').textContent = 'FINDING ROOM...';
         const conn = peer.connect('laserman-' + code, { reliable: true });
         conn.on('open', () => {
           setupConnectionHandlers(conn);
@@ -3995,7 +4012,13 @@
       });
 
       peer.on('error', (err) => {
-        document.getElementById('join-status').textContent = 'CONNECTION ERROR';
+        if (err.type === 'network') {
+          document.getElementById('join-status').textContent = 'SERVER UNREACHABLE';
+        } else if (err.type === 'peer-unavailable') {
+          document.getElementById('join-status').textContent = 'ROOM NOT FOUND';
+        } else {
+          document.getElementById('join-status').textContent = 'CONNECTION ERROR';
+        }
         document.getElementById('join-status').style.color = 'var(--red)';
       });
     }
