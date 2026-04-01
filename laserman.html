@@ -761,14 +761,16 @@
       display: flex;
       gap: clamp(6px, 2vw, 12px);
       margin-top: clamp(1px, 0.4dvh, 4px);
+      max-width: 90vw;
+      justify-content: center;
     }
 
     .game-btn {
       font-family: 'Orbitron', sans-serif;
-      font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+      font-size: clamp(0.5rem, 1.5vw, 0.7rem);
       font-weight: 700;
       letter-spacing: clamp(1px, 0.5vw, 3px);
-      padding: clamp(6px, 1dvh, 10px) clamp(12px, 3vw, 22px);
+      padding: clamp(6px, 1dvh, 10px) clamp(10px, 2.5vw, 22px);
       background: transparent;
       border: 1px solid var(--cyan);
       border-radius: 6px;
@@ -777,6 +779,9 @@
       transition: all 0.3s ease;
       text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 45vw;
     }
 
     .game-btn:active {
@@ -1105,13 +1110,6 @@
               <div class="color-btn" data-color="blue"></div>
             </div>
           </div>
-          <div class="color-section">
-            <div class="color-label">PERFORMANCE</div>
-            <div class="perf-options" id="host-perf-select">
-              <div class="perf-btn" data-perf="low">LOW</div>
-              <div class="perf-btn" data-perf="high">HIGH</div>
-            </div>
-          </div>
         </div>
         <div class="word-input-row">
           <input type="text" id="host-word-input" class="word-input-styled" placeholder="TYPE WORD..." maxlength="20" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="characters">
@@ -1156,13 +1154,6 @@
             <div class="color-btn" data-color="yellow"></div>
             <div class="color-btn selected" data-color="green"></div>
             <div class="color-btn" data-color="blue"></div>
-          </div>
-        </div>
-        <div class="color-section">
-          <div class="color-label">PERFORMANCE</div>
-          <div class="perf-options" id="joiner-perf-select">
-            <div class="perf-btn" data-perf="low">LOW</div>
-            <div class="perf-btn" data-perf="high">HIGH</div>
           </div>
         </div>
       </div>
@@ -3698,7 +3689,38 @@
       return code;
     }
 
+    let heartbeatInterval = null;
+    let lastPong = 0;
+
+    function startHeartbeat() {
+      stopHeartbeat();
+      lastPong = Date.now();
+      heartbeatInterval = setInterval(() => {
+        if (peerConn && peerConn.open) {
+          peerConn.send({ type: 'ping' });
+          // If no pong in 15s, connection is dead
+          if (Date.now() - lastPong > 15000) {
+            // Trigger the close handler
+            try { peerConn.close(); } catch(e){}
+          }
+        }
+      }, 5000);
+    }
+
+    function stopHeartbeat() {
+      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    }
+
+    // When phone wakes from sleep, check connection immediately
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && peerConn) {
+        lastPong = Date.now(); // grace period after wake
+        peerConn.send({ type: 'ping' });
+      }
+    });
+
     function cleanupPeer() {
+      stopHeartbeat();
       if (peerConn) { try { peerConn.close(); } catch(e){} peerConn = null; }
       if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
       onlineRole = null;
@@ -3743,11 +3765,15 @@
 
     function setupConnectionHandlers(conn) {
       peerConn = conn;
+      startHeartbeat();
       // Send our name to the other player (immediately if already open, or on open)
       const sendName = () => onlineSend({ type: 'name', name: onlineMyName });
       if (conn.open) sendName();
       else conn.on('open', sendName);
       conn.on('data', (data) => {
+        // Heartbeat
+        if (data.type === 'ping') { onlineSend({ type: 'pong' }); return; }
+        if (data.type === 'pong') { lastPong = Date.now(); return; }
         if (data.type === 'name') {
           onlineOpponentName = data.name || 'OPPONENT';
           // Update connection messages with the actual name
@@ -4298,15 +4324,6 @@
         localStorage.setItem('laserman_color', selectedColor);
       });
     });
-    document.querySelectorAll('.online-options-panel .perf-btn').forEach(el => {
-      onTap(el, () => {
-        const panel = el.closest('.online-options-panel');
-        panel.querySelectorAll('.perf-btn').forEach(o => o.classList.remove('selected'));
-        el.classList.add('selected');
-        applyPerfTier(el.dataset.perf);
-      });
-    });
-
     // Confirmation modal for leaving online mode
     function showConfirmLeave(onConfirm) {
       document.getElementById('confirm-modal').classList.add('show');
