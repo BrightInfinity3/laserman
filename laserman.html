@@ -3690,6 +3690,24 @@
       return code;
     }
 
+    // Fetch TURN credentials from Metered API (cached for session)
+    let cachedIceServers = null;
+    async function getIceServers() {
+      if (cachedIceServers) return cachedIceServers;
+      try {
+        const resp = await fetch('https://mkgamez.metered.live/api/v1/turn/credentials?apiKey=5J0IvbHf3NRFHuDDyUkXRof1oWRkJEtfHbmyKDp54iIHvm-p');
+        const servers = await resp.json();
+        cachedIceServers = servers;
+        return servers;
+      } catch(e) {
+        // Fallback to STUN only if API fails
+        return [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ];
+      }
+    }
+
     let heartbeatInterval = null;
     let lastPong = 0;
 
@@ -4021,7 +4039,7 @@
       document.getElementById('online-role-select').style.display = 'block';
     }
 
-    function hostGame() {
+    async function hostGame() {
       document.getElementById('online-role-select').style.display = 'none';
       document.getElementById('online-host-view').style.display = 'block';
       document.getElementById('online-host-status').textContent = 'CREATING ROOM...';
@@ -4029,17 +4047,11 @@
 
       const roomCode = generateRoomCode();
       onlineRole = 'host';
+      const iceServers = await getIceServers();
 
       peer = new Peer('laserman-' + roomCode, {
         debug: 0,
-        config: { iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-        ]}
+        config: { iceServers: iceServers }
       });
 
       peer.on('open', () => {
@@ -4080,7 +4092,7 @@
       document.getElementById('join-code-input').focus();
     }
 
-    function connectToHost() {
+    async function connectToHost() {
       const code = document.getElementById('join-code-input').value.trim().toUpperCase();
       if (code.length < 3) {
         document.getElementById('join-error').textContent = 'ENTER A VALID ROOM CODE';
@@ -4090,17 +4102,11 @@
       document.getElementById('join-status').textContent = 'REACHING SERVER...';
       document.getElementById('join-status').style.color = 'var(--amber)';
       onlineRole = 'joiner';
+      const iceServers = await getIceServers();
 
       peer = new Peer(undefined, {
         debug: 0,
-        config: { iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-        ]}
+        config: { iceServers: iceServers }
       });
 
       peer.on('open', () => {
