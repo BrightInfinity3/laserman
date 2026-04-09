@@ -3690,23 +3690,13 @@
       return code;
     }
 
-    // Fetch TURN credentials from Metered API (cached for session)
-    let cachedIceServers = null;
-    async function getIceServers() {
-      if (cachedIceServers) return cachedIceServers;
-      try {
-        const resp = await fetch('https://mkgamez.metered.live/api/v1/turn/credentials?apiKey=5J0IvbHf3NRFHuDDyUkXRof1oWRkJEtfHbmyKDp54iIHvm-p');
-        const servers = await resp.json();
-        cachedIceServers = servers;
-        return servers;
-      } catch(e) {
-        // Fallback to STUN only if API fails
-        return [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ];
-      }
-    }
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      { urls: 'turn:standard.relay.metered.ca:80', username: '60110f6a32b1f7f072af64f7', credential: 'jJLWCnSNU6qaABwU' },
+      { urls: 'turn:standard.relay.metered.ca:80?transport=tcp', username: '60110f6a32b1f7f072af64f7', credential: 'jJLWCnSNU6qaABwU' },
+      { urls: 'turn:standard.relay.metered.ca:443', username: '60110f6a32b1f7f072af64f7', credential: 'jJLWCnSNU6qaABwU' },
+      { urls: 'turns:standard.relay.metered.ca:443?transport=tcp', username: '60110f6a32b1f7f072af64f7', credential: 'jJLWCnSNU6qaABwU' }
+    ];
 
     let heartbeatInterval = null;
     let lastPong = 0;
@@ -4039,7 +4029,7 @@
       document.getElementById('online-role-select').style.display = 'block';
     }
 
-    async function hostGame() {
+    function hostGame() {
       document.getElementById('online-role-select').style.display = 'none';
       document.getElementById('online-host-view').style.display = 'block';
       document.getElementById('online-host-status').textContent = 'CREATING ROOM...';
@@ -4047,11 +4037,10 @@
 
       const roomCode = generateRoomCode();
       onlineRole = 'host';
-      const iceServers = await getIceServers();
 
       peer = new Peer('laserman-' + roomCode, {
         debug: 0,
-        config: { iceServers: iceServers }
+        config: { iceServers: ICE_SERVERS }
       });
 
       peer.on('open', () => {
@@ -4092,7 +4081,7 @@
       document.getElementById('join-code-input').focus();
     }
 
-    async function connectToHost() {
+    function connectToHost() {
       const code = document.getElementById('join-code-input').value.trim().toUpperCase();
       if (code.length < 3) {
         document.getElementById('join-error').textContent = 'ENTER A VALID ROOM CODE';
@@ -4102,11 +4091,10 @@
       document.getElementById('join-status').textContent = 'REACHING SERVER...';
       document.getElementById('join-status').style.color = 'var(--amber)';
       onlineRole = 'joiner';
-      const iceServers = await getIceServers();
 
       peer = new Peer(undefined, {
         debug: 0,
-        config: { iceServers: iceServers }
+        config: { iceServers: ICE_SERVERS }
       });
 
       peer.on('open', () => {
