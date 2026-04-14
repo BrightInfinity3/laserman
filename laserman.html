@@ -221,6 +221,25 @@
       }
     }
 
+    .menu-btn.amber,
+    .menu-btn#btn-laserlink {
+      border-color: var(--amber);
+      color: var(--amber);
+      text-shadow: 0 0 8px rgba(255, 170, 0, 0.4);
+    }
+    .menu-btn.amber:active,
+    .menu-btn#btn-laserlink:active {
+      background: rgba(255, 170, 0, 0.15);
+      box-shadow: 0 0 25px rgba(255, 170, 0, 0.3), inset 0 0 15px rgba(255, 170, 0, 0.05);
+    }
+    @media (hover: hover) {
+      .menu-btn.amber:hover,
+      .menu-btn#btn-laserlink:hover {
+        background: rgba(255, 170, 0, 0.1);
+        box-shadow: 0 0 25px rgba(255, 170, 0, 0.3), inset 0 0 15px rgba(255, 170, 0, 0.05);
+      }
+    }
+
     .menu-btn.white {
       border-color: #ffffff;
       color: #ffffff;
@@ -570,6 +589,66 @@
     #toggle-cat-btn:hover {
       background: rgba(123, 47, 255, 0.15);
       border-color: var(--purple);
+    }
+
+    /* ===== LASERLINK SENDER ROW ===== */
+    #laserlink-sender-row {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+      color: rgba(255, 170, 0, 0.7);
+      letter-spacing: 2px;
+    }
+    #laserlink-sender-name {
+      color: var(--amber);
+      text-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+      font-weight: 700;
+    }
+
+    /* ===== LASERLINK SCREEN ===== */
+    #laserlink-toggle-vis-btn {
+      width: 70px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 8px 0;
+      background: rgba(255, 170, 0, 0.08);
+      border: 1px solid rgba(255, 170, 0, 0.35);
+      border-radius: 4px;
+      color: var(--amber);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #laserlink-toggle-vis-btn:hover {
+      background: rgba(255, 170, 0, 0.15);
+      border-color: var(--amber);
+    }
+    #laserlink-name-input.word-input-styled {
+      text-align: center;
+      width: min(280px, 80vw);
+    }
+    #laserlink-message {
+      width: 100%;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--amber);
+      background: rgba(255, 170, 0, 0.06);
+      border: 1px solid rgba(255, 170, 0, 0.35);
+      border-radius: 6px;
+      padding: 12px;
+      resize: none;
+      outline: none;
+      letter-spacing: 1px;
+      word-break: break-all;
+      box-sizing: border-box;
+    }
+    #laserlink-message:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 12px rgba(255, 170, 0, 0.2);
     }
 
     /* ===== WORD DISPLAY ===== */
@@ -1027,6 +1106,7 @@
       <button class="menu-btn" id="btn-solo">SOLO</button>
       <button class="menu-btn purple" id="btn-multi">MULTIPLAYER</button>
       <button class="menu-btn" id="btn-online" style="border-color:var(--green);color:var(--green);text-shadow:0 0 8px rgba(0,255,136,0.4)">ONLINE</button>
+      <button class="menu-btn" id="btn-laserlink" style="border-color:var(--amber);color:var(--amber);text-shadow:0 0 8px rgba(255,170,0,0.4)">LASERLINK</button>
       <button class="menu-btn white" id="btn-options">OPTIONS</button>
       <button class="home-btn" id="btn-home" title="Back to home">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1203,6 +1283,45 @@
     <button class="menu-btn purple" id="btn-online-back" style="margin-top:16px">MAIN MENU</button>
   </div>
 
+  <!-- ===== LASERLINK SCREEN ===== -->
+  <div id="laserlink-screen" class="screen">
+    <h1 class="game-title title-size" style="margin-bottom:4px">LASERMAN</h1>
+    <h1 class="game-title" style="font-size:2.2rem; margin-bottom:20px; color:var(--amber); text-shadow:0 0 10px rgba(255,170,0,0.6), 0 0 24px rgba(255,170,0,0.3)">LASERLINK</h1>
+
+    <!-- Compose view -->
+    <div id="laserlink-compose" style="text-align:center">
+      <div class="menu-subtitle" style="margin-bottom:12px">YOUR NAME</div>
+      <div class="word-input-row" style="justify-content:center; margin-bottom:16px">
+        <input type="text" id="laserlink-name-input" class="word-input-styled" placeholder="NAME..." maxlength="12" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="characters">
+      </div>
+      <div class="menu-subtitle" style="margin-bottom:12px">TARGET WORD</div>
+      <div class="word-input-row" style="justify-content:center">
+        <input type="password" id="laserlink-word-input" placeholder="TYPE WORD..." maxlength="20" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="characters">
+        <button id="laserlink-toggle-vis-btn">SHOW</button>
+      </div>
+      <div id="laserlink-error" style="color:var(--red);font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:2px;min-height:1.2em;margin-top:6px"></div>
+      <div class="entry-actions" style="margin-top:8px">
+        <button class="menu-btn amber" id="btn-laserlink-create">CREATE LINK</button>
+        <button class="menu-btn purple" id="btn-laserlink-back">MAIN MENU</button>
+      </div>
+    </div>
+
+    <!-- Share view -->
+    <div id="laserlink-share" style="display:none; text-align:center; width:min(440px, 92vw)">
+      <div class="menu-subtitle" style="margin-bottom:10px">SEND TO FRIEND</div>
+      <textarea id="laserlink-message" readonly rows="4"></textarea>
+      <div id="laserlink-copy-status" style="color:var(--green);font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:2px;min-height:1.2em;margin-top:8px"></div>
+      <div class="entry-actions" style="margin-top:4px">
+        <button class="menu-btn amber" id="btn-laserlink-copy">COPY</button>
+        <button class="menu-btn" id="btn-laserlink-share-native" style="display:none">SHARE</button>
+      </div>
+      <div class="entry-actions" style="margin-top:10px">
+        <button class="menu-btn" id="btn-laserlink-new">NEW WORD</button>
+        <button class="menu-btn purple" id="btn-laserlink-done">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== GAME SCREEN ===== -->
   <div id="game-screen" class="screen">
     <h1 class="game-title">LASERMAN</h1>
@@ -1220,6 +1339,9 @@
     <div id="category-row">
       <span id="category-text">CATEGORY: ●●●●●●●●</span>
       <button id="toggle-cat-btn">SHOW</button>
+    </div>
+    <div id="laserlink-sender-row" style="display:none">
+      <span id="laserlink-sender-text">LASERLINK FROM <span id="laserlink-sender-name"></span></span>
     </div>
     <div id="word-display"></div>
     <div id="keyboard"></div>
@@ -3669,6 +3791,23 @@
         catRow.style.display = 'none';
       }
 
+      // LASERLINK receiver: show sender row
+      const llRow = document.getElementById('laserlink-sender-row');
+      if (gameState.mode === 'laserlink' && gameState.laserlinkSender) {
+        llRow.style.display = 'flex';
+        document.getElementById('laserlink-sender-name').textContent = gameState.laserlinkSender;
+      } else {
+        llRow.style.display = 'none';
+      }
+
+      // LASERLINK mode: change NEW GAME to PLAY AGAIN (same word)
+      const newGameBtn = document.getElementById('new-game-btn');
+      if (gameState.mode === 'laserlink') {
+        newGameBtn.textContent = 'PLAY AGAIN';
+      } else {
+        newGameBtn.textContent = 'NEW GAME';
+      }
+
       // Online host: reveal word and lock keyboard (spectator mode)
       if (gameState.mode === 'online-host') {
         document.getElementById('keyboard').classList.add('game-over');
@@ -4508,6 +4647,9 @@
         document.getElementById('new-game-btn').textContent = 'WAITING FOR ' + name + '...';
       } else if (gameState.mode === 'multi') {
         goToWordEntry();
+      } else if (gameState.mode === 'laserlink') {
+        // Replay same word
+        startGame(gameState.word);
       } else {
         startSoloGame();
       }
@@ -4519,6 +4661,13 @@
           cleanupPeer();
           goToMainMenu();
         });
+      } else if (gameState.mode === 'laserlink') {
+        // LASERLINK receiver: return to parent site home if on Railway, else title screen
+        if (window.location.pathname.startsWith('/laserman')) {
+          window.location.href = '/';
+        } else {
+          goToMainMenu();
+        }
       } else {
         cleanupPeer();
         goToMainMenu();
@@ -4568,6 +4717,162 @@
     });
 
     // ===========================
+    // LASERLINK
+    // ===========================
+    // Encode/decode URL-safe base64 (no padding, + -> -, / -> _)
+    function b64urlEncode(str) {
+      return btoa(unescape(encodeURIComponent(str)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function b64urlDecode(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      try { return decodeURIComponent(escape(atob(str))); } catch(e) { return null; }
+    }
+
+    function buildLaserlinkUrl(word, name, character, color) {
+      const payload = JSON.stringify({ w: word, n: name, c: character, col: color });
+      const token = b64urlEncode(payload);
+      // Build URL against current location, stripping any existing query/hash
+      const base = window.location.origin + window.location.pathname;
+      return base + '?ll=' + token;
+    }
+
+    function parseLaserlinkUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('ll');
+      if (!token) return null;
+      const json = b64urlDecode(token);
+      if (!json) return null;
+      try {
+        const data = JSON.parse(json);
+        if (!data.w || typeof data.w !== 'string') return null;
+        return {
+          word: String(data.w).toUpperCase().slice(0, 30),
+          name: (data.n ? String(data.n) : 'FRIEND').toUpperCase().slice(0, 12),
+          character: (data.c && CHARACTER_CONFIGS[data.c]) ? data.c : 'laserman',
+          color: (['green','blue','yellow'].includes(data.col)) ? data.col : 'green',
+        };
+      } catch(e) { return null; }
+    }
+
+    // --- Sender UI ---
+    function goToLaserlink() {
+      hideMessage();
+      // Pre-fill saved name
+      const savedName = localStorage.getItem('laserman_online_name') || '';
+      document.getElementById('laserlink-name-input').value = savedName;
+      document.getElementById('laserlink-word-input').value = '';
+      document.getElementById('laserlink-error').textContent = '';
+      document.getElementById('laserlink-word-input').type = 'password';
+      document.getElementById('laserlink-toggle-vis-btn').textContent = 'SHOW';
+      document.getElementById('laserlink-compose').style.display = '';
+      document.getElementById('laserlink-share').style.display = 'none';
+      showScreen('laserlink-screen');
+      // Focus name if empty, else word
+      if (!savedName) document.getElementById('laserlink-name-input').focus();
+      else document.getElementById('laserlink-word-input').focus();
+    }
+
+    onTap(document.getElementById('btn-laserlink'), goToLaserlink);
+    onTap(document.getElementById('btn-laserlink-back'), goToMainMenu);
+
+    // Name input: sanitize
+    document.getElementById('laserlink-name-input').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^a-zA-Z0-9 ]/g, '').toUpperCase();
+    });
+
+    // Word visibility toggle
+    onTap(document.getElementById('laserlink-toggle-vis-btn'), () => {
+      const input = document.getElementById('laserlink-word-input');
+      const btn = document.getElementById('laserlink-toggle-vis-btn');
+      if (input.type === 'password') { input.type = 'text'; btn.textContent = 'HIDE'; }
+      else { input.type = 'password'; btn.textContent = 'SHOW'; }
+    });
+
+    // Enter on inputs triggers create
+    ['laserlink-name-input', 'laserlink-word-input'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-laserlink-create').click();
+      });
+    });
+
+    onTap(document.getElementById('btn-laserlink-create'), () => {
+      const name = document.getElementById('laserlink-name-input').value.trim().toUpperCase();
+      const word = document.getElementById('laserlink-word-input').value.trim().toUpperCase();
+      const err = document.getElementById('laserlink-error');
+      if (!name) { err.textContent = 'ENTER YOUR NAME'; return; }
+      if (word.length < 2) { err.textContent = 'WORD MUST BE AT LEAST 2 LETTERS'; return; }
+      if (!/^[A-Z]+$/.test(word)) { err.textContent = 'LETTERS ONLY'; return; }
+      err.textContent = '';
+      localStorage.setItem('laserman_online_name', name);
+      const url = buildLaserlinkUrl(word, name, selectedCharacter, selectedColor);
+      const message = name + ' has sent you a Laserlink! ' + url;
+      document.getElementById('laserlink-message').value = message;
+      document.getElementById('laserlink-copy-status').textContent = '';
+      document.getElementById('laserlink-compose').style.display = 'none';
+      document.getElementById('laserlink-share').style.display = '';
+      // Show native SHARE button if supported
+      const shareBtn = document.getElementById('btn-laserlink-share-native');
+      shareBtn.style.display = (navigator.share) ? '' : 'none';
+    });
+
+    onTap(document.getElementById('btn-laserlink-copy'), async () => {
+      const msg = document.getElementById('laserlink-message').value;
+      const status = document.getElementById('laserlink-copy-status');
+      try {
+        await navigator.clipboard.writeText(msg);
+        status.textContent = 'COPIED!';
+        status.style.color = 'var(--green)';
+      } catch(e) {
+        // Fallback: select the textarea
+        const ta = document.getElementById('laserlink-message');
+        ta.focus(); ta.select();
+        try {
+          document.execCommand('copy');
+          status.textContent = 'COPIED!';
+          status.style.color = 'var(--green)';
+        } catch(e2) {
+          status.textContent = 'TAP & HOLD TO COPY';
+          status.style.color = 'var(--amber)';
+        }
+      }
+      setTimeout(() => { status.textContent = ''; }, 2500);
+    });
+
+    onTap(document.getElementById('btn-laserlink-share-native'), async () => {
+      const msg = document.getElementById('laserlink-message').value;
+      try {
+        await navigator.share({ text: msg });
+      } catch(e) { /* user cancelled or unsupported */ }
+    });
+
+    onTap(document.getElementById('btn-laserlink-new'), () => {
+      document.getElementById('laserlink-word-input').value = '';
+      document.getElementById('laserlink-error').textContent = '';
+      document.getElementById('laserlink-word-input').type = 'password';
+      document.getElementById('laserlink-toggle-vis-btn').textContent = 'SHOW';
+      document.getElementById('laserlink-compose').style.display = '';
+      document.getElementById('laserlink-share').style.display = 'none';
+      document.getElementById('laserlink-word-input').focus();
+    });
+
+    onTap(document.getElementById('btn-laserlink-done'), goToMainMenu);
+
+    // --- Receiver: start laserlink game ---
+    function startLaserlinkGame(info) {
+      gameState.mode = 'laserlink';
+      gameState.category = '';
+      gameState.laserlinkSender = info.name;
+      selectedCharacter = info.character;
+      selectedColor = info.color;
+      applyColorPalette(selectedColor);
+      // Clean the URL so a refresh doesn't replay — keeps the link single-use per visit
+      try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+      startGame(info.word);
+    }
+
+    // ===========================
     // INIT
     // ===========================
     // Load saved selections (character defaults to laserman, always start green)
@@ -4578,7 +4883,13 @@
     // Apply performance tier (toggles CSS overlays, sets star count)
     applyPerfTier(perfTier);
 
-    showScreen('title-screen');
+    // Check for LASERLINK URL param — if present, jump straight to game
+    const _laserlinkInfo = parseLaserlinkUrl();
+    if (_laserlinkInfo) {
+      startLaserlinkGame(_laserlinkInfo);
+    } else {
+      showScreen('title-screen');
+    }
     requestAnimationFrame(render);
   </script>
 </body>
