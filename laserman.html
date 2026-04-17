@@ -5230,10 +5230,31 @@
       requestAnimationFrame(autosizeLaserlinkMessage);
     });
 
-    // Sizes the share-link textarea to exactly fit its content — no blank lines.
+    // Sizes the share-link textarea to exactly fit its content — no blank trailing lines
+    // AND narrows the container so the box ends where the text ends (capped at 92vw).
     function autosizeLaserlinkMessage() {
       const ta = document.getElementById('laserlink-message');
-      if (!ta || ta.offsetParent === null) return;  // not visible
+      const share = document.getElementById('laserlink-share');
+      if (!ta || !share || ta.offsetParent === null || !ta.value) return;
+
+      // Measure the text's natural single-line width with a hidden mirror.
+      const measurer = document.createElement('span');
+      measurer.style.cssText =
+        'position:absolute;visibility:hidden;white-space:pre;' +
+        'font-family:"Share Tech Mono",monospace;' +
+        'font-size:0.85rem;letter-spacing:1px';
+      measurer.textContent = ta.value;
+      document.body.appendChild(measurer);
+      const textWidth = measurer.offsetWidth;
+      document.body.removeChild(measurer);
+
+      // Container width = text width + textarea padding (24px) + border (2px) + small buffer
+      // Capped at 92vw so narrow screens still wrap nicely.
+      const desired = textWidth + 30;
+      const maxAllowed = window.innerWidth * 0.92;
+      share.style.width = Math.min(desired, maxAllowed) + 'px';
+
+      // Auto-size height to fit (may be 2+ lines if desired > maxAllowed and text wraps)
       ta.style.height = 'auto';
       ta.style.height = (ta.scrollHeight + 2) + 'px';
     }
