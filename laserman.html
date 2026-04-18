@@ -1343,13 +1343,13 @@
     <div class="color-section">
       <div class="color-label">SELECT COLOR</div>
       <div class="color-options">
+        <div class="color-btn" data-color="red"></div>
         <div class="color-btn" data-color="yellow"></div>
-        <div class="color-btn selected" data-color="green"></div>
         <div class="color-btn" data-color="blue"></div>
       </div>
       <div class="color-options row2">
         <div class="color-btn" data-color="orange"></div>
-        <div class="color-btn" data-color="red"></div>
+        <div class="color-btn selected" data-color="green"></div>
         <div class="color-btn" data-color="purple"></div>
       </div>
     </div>
@@ -1442,13 +1442,13 @@
           <div class="color-section">
             <div class="color-label">SELECT COLOR</div>
             <div class="color-options" id="host-color-select">
+              <div class="color-btn" data-color="red"></div>
               <div class="color-btn" data-color="yellow"></div>
-              <div class="color-btn selected" data-color="green"></div>
               <div class="color-btn" data-color="blue"></div>
             </div>
             <div class="color-options row2" id="host-color-select-2">
               <div class="color-btn" data-color="orange"></div>
-              <div class="color-btn" data-color="red"></div>
+              <div class="color-btn selected" data-color="green"></div>
               <div class="color-btn" data-color="purple"></div>
             </div>
           </div>
@@ -1502,13 +1502,13 @@
         <div class="color-section">
           <div class="color-label">SELECT COLOR</div>
           <div class="color-options" id="joiner-color-select">
+            <div class="color-btn" data-color="red"></div>
             <div class="color-btn" data-color="yellow"></div>
-            <div class="color-btn selected" data-color="green"></div>
             <div class="color-btn" data-color="blue"></div>
           </div>
           <div class="color-options row2" id="joiner-color-select-2">
             <div class="color-btn" data-color="orange"></div>
-            <div class="color-btn" data-color="red"></div>
+            <div class="color-btn selected" data-color="green"></div>
             <div class="color-btn" data-color="purple"></div>
           </div>
         </div>
@@ -3348,16 +3348,17 @@
           ctx.fill();
         }
 
-        // Border — dark outline by default, red/gray after body hit.
+        // Border — palette (chosen) color by default; switches to red (or gray for red theme)
+        // once the body is etched as a damage cue.
         if (bodyIsRed) {
           ctx.strokeStyle = COL.bodyRed;
           ctx.shadowBlur = 6;
           ctx.shadowColor = COL.redGlow;
           ctx.lineWidth = 2.5;
         } else {
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
-          ctx.shadowBlur = 3;
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+          ctx.strokeStyle = COL.bodyGreen;
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = COL.greenGlow;
           ctx.lineWidth = 2;
         }
         ctx.beginPath();
