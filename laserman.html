@@ -444,6 +444,10 @@
     .color-btn[data-color="green"] { background: #00ff88; color: #00ff88; }
     .color-btn[data-color="blue"] { background: #4488ff; color: #4488ff; }
     .color-btn[data-color="yellow"] { background: #ffcc00; color: #ffcc00; }
+    .color-btn[data-color="orange"] { background: #ff8822; color: #ff8822; }
+    .color-btn[data-color="red"] { background: #ff3344; color: #ff3344; }
+    .color-btn[data-color="purple"] { background: #a855ff; color: #a855ff; }
+    .color-options.row2 { margin-top: 12px; }
 
     /* ===== WORD ENTRY SCREEN ===== */
     #word-entry-screen {
@@ -1020,6 +1024,12 @@
       text-shadow: 0 0 8px var(--purple), 0 0 20px var(--purple), 0 0 40px var(--purple), 0 0 80px rgba(123,47,255,0.5);
     }
 
+    /* Purple theme: failure message renders gray so it doesn't blend with the purple palette */
+    .msg-line.lose.gray-fail {
+      color: #cfcfcf;
+      text-shadow: 0 0 8px #777, 0 0 20px #555, 0 0 40px #444, 0 0 80px rgba(120,120,120,0.5);
+    }
+
     /* ===== GAME BUTTONS ===== */
     .game-buttons {
       display: flex;
@@ -1337,6 +1347,11 @@
         <div class="color-btn selected" data-color="green"></div>
         <div class="color-btn" data-color="blue"></div>
       </div>
+      <div class="color-options row2">
+        <div class="color-btn" data-color="orange"></div>
+        <div class="color-btn" data-color="red"></div>
+        <div class="color-btn" data-color="purple"></div>
+      </div>
     </div>
     <div class="color-section">
       <div class="color-label">PERFORMANCE</div>
@@ -1431,6 +1446,11 @@
               <div class="color-btn selected" data-color="green"></div>
               <div class="color-btn" data-color="blue"></div>
             </div>
+            <div class="color-options row2" id="host-color-select-2">
+              <div class="color-btn" data-color="orange"></div>
+              <div class="color-btn" data-color="red"></div>
+              <div class="color-btn" data-color="purple"></div>
+            </div>
           </div>
         </div>
         <div class="word-input-row">
@@ -1485,6 +1505,11 @@
             <div class="color-btn" data-color="yellow"></div>
             <div class="color-btn selected" data-color="green"></div>
             <div class="color-btn" data-color="blue"></div>
+          </div>
+          <div class="color-options row2" id="joiner-color-select-2">
+            <div class="color-btn" data-color="orange"></div>
+            <div class="color-btn" data-color="red"></div>
+            <div class="color-btn" data-color="purple"></div>
           </div>
         </div>
       </div>
@@ -1648,7 +1673,14 @@
       green:  { primary: '#00ff88', accent: '#00f0ff', body: '#00ff88', glow: 'rgba(0,255,136,0.6)',   core: '#88ffbb', rgb: [0, 255, 136] },
       blue:   { primary: '#4488ff', accent: '#66ccff', body: '#4488ff', glow: 'rgba(68,136,255,0.6)',  core: '#99bbff', rgb: [68, 136, 255] },
       yellow: { primary: '#ffcc00', accent: '#ffee44', body: '#ffcc00', glow: 'rgba(255,204,0,0.6)',   core: '#ffee88', rgb: [255, 204, 0] },
+      orange: { primary: '#ff8822', accent: '#ffaa44', body: '#ff8822', glow: 'rgba(255,136,34,0.6)',  core: '#ffcc88', rgb: [255, 136, 34] },
+      red:    { primary: '#ff3344', accent: '#ff6677', body: '#ff3344', glow: 'rgba(255,51,68,0.6)',   core: '#ff99aa', rgb: [255, 51, 68] },
+      purple: { primary: '#a855ff', accent: '#c788ff', body: '#a855ff', glow: 'rgba(168,85,255,0.6)',  core: '#d4b3ff', rgb: [168, 85, 255] },
     };
+
+    // Per-theme flags read during drawing
+    let grayLaserMode = false;     // true for red theme — turrets & laser etching drawn gray
+    let grayFailMode = false;      // true for purple theme — failure message drawn gray
 
     function applyColorPalette(color) {
       const p = COLOR_PALETTES[color] || COLOR_PALETTES.green;
@@ -1657,6 +1689,33 @@
       COL.bodyGreen = p.body;
       COL.greenGlow = p.glow;
       COL.coreGreen = p.core;
+
+      grayLaserMode = (color === 'red');
+      grayFailMode  = (color === 'purple');
+
+      if (grayLaserMode) {
+        // Red theme: turrets + laser etching + hit body render gray so they
+        // don't blend into the red body palette.
+        COL.red       = '#555555';
+        COL.bodyRed   = '#aaaaaa';
+        COL.redGlow   = 'rgba(170,170,170,0.55)';
+        COL.laserCore = '#cccccc';
+        COL.laserGlow = 'rgba(200,200,200,0.6)';
+        COL.pink      = '#888888';
+        COL.traceBright = '#bbbbbb';  // replaces hardcoded '#ff6677'
+        COL.traceCore   = '#dddddd';  // replaces hardcoded '#ff8899'
+        COL.turretGreen = '#999999';  // alive-turret color override
+      } else {
+        COL.red       = '#ff0044';
+        COL.bodyRed   = '#ff4466';
+        COL.redGlow   = 'rgba(255, 0, 68, 0.6)';
+        COL.laserCore = '#ff2244';
+        COL.laserGlow = 'rgba(255, 34, 68, 0.6)';
+        COL.pink      = '#ff0066';
+        COL.traceBright = '#ff6677';
+        COL.traceCore   = '#ff8899';
+        COL.turretGreen = p.primary;  // turrets match the palette
+      }
     }
 
     // ===========================
@@ -2125,16 +2184,19 @@
       }
 
       if (selectedCharacter === 'laserwoman') {
-        // 6 lives, 6 turrets (rotation 30°).
+        // 6 lives, 6 turrets (rotation 30°):
+        //   0=upper-right, 1=right, 2=lower-right, 3=lower-left, 4=left, 5=upper-left.
         // Final-combo mode A/B/C/D determines primary AND which top turret fires the head shot.
         //   A = head first, B = flower first, C = hair-left first, D = hair-right first.
-        // NEW turret assignments:
-        //   - Head: a top turret (0 or 5). Fixed to 5 for mode C, 0 for mode D; random otherwise.
-        //   - Arm on head turret's side: the OTHER top turret hits that arm.
-        //     (If head=0 (upper-right), arm turret = 5 (upper-left) hits L-arm.
-        //      If head=5 (upper-left), arm turret = 0 (upper-right) hits R-arm.)
-        //   - Torso: a random side turret (1 = right, or 4 = left). Etching still starts at the neck.
-        //   - Remaining 3 turrets fill the remaining 3 limbs at random.
+        // Rules:
+        //   - Head: top turret (5 for C, 0 for D, random otherwise).
+        //   - Arm on head turret's side: OTHER top turret hits that arm.
+        //   - Torso: random side turret (1 or 4).
+        //   - Remaining limbs must be reached WITHOUT crossing other body parts:
+        //       R-arm only from right turrets {0,1,2}
+        //       L-arm only from left turrets  {3,4,5}
+        //       R-leg from right turrets + lower-left {0,1,2,3}
+        //       L-leg from left turrets + lower-right {3,4,5,2}
         const modes = ['A', 'B', 'C', 'D'];
         finalComboMode = modes[Math.floor(Math.random() * modes.length)];
         let headTurret;
@@ -2142,15 +2204,48 @@
         else if (finalComboMode === 'D') headTurret = 0;
         else                             headTurret = Math.random() < 0.5 ? 0 : 5;
         const armTurret = headTurret === 0 ? 5 : 0;
-        const armPartIdx = headTurret === 0 ? 2 : 3; // headTurret=0 -> top-right, armTurret=5 on LEFT -> L-arm(2); else R-arm(3)
+        const armPartIdx = headTurret === 0 ? 2 : 3;  // head=0 -> L-arm from 5; head=5 -> R-arm from 0
         const torsoTurret = Math.random() < 0.5 ? 1 : 4;
-        // Build the assignment map.
+
         const assigned = { 0: headTurret, 1: torsoTurret };
         assigned[armPartIdx] = armTurret;
+        const usedTurrets = new Set([headTurret, torsoTurret, armTurret]);
         const remainingParts = [2, 3, 4, 5].filter(p => !(p in assigned));
-        const remainingTurrets = [0, 1, 2, 3, 4, 5].filter(t => t !== headTurret && t !== torsoTurret && t !== armTurret);
-        shuffleArray(remainingTurrets);
-        remainingParts.forEach((p, i) => { assigned[p] = remainingTurrets[i]; });
+
+        // Allowed-turret sets per part (enforces no-cross-body-parts rule)
+        const LW_ALLOWED = {
+          2: [3, 4, 5],        // L-arm
+          3: [0, 1, 2],        // R-arm
+          4: [3, 4, 5, 2],     // L-leg
+          5: [0, 1, 2, 3],     // R-leg
+        };
+
+        // Backtracking assignment
+        const partsOrder = [...remainingParts];
+        shuffleArray(partsOrder);
+        const solution = {};
+        function bt(i) {
+          if (i >= partsOrder.length) return true;
+          const p = partsOrder[i];
+          const choices = LW_ALLOWED[p].filter(t => !usedTurrets.has(t));
+          shuffleArray(choices);
+          for (const t of choices) {
+            usedTurrets.add(t);
+            solution[p] = t;
+            if (bt(i + 1)) return true;
+            usedTurrets.delete(t);
+            delete solution[p];
+          }
+          return false;
+        }
+        if (!bt(0)) {
+          // Shouldn't happen with these constraints — fallback to random.
+          const remainingTurrets = [0, 1, 2, 3, 4, 5].filter(t => !usedTurrets.has(t));
+          shuffleArray(remainingTurrets);
+          remainingParts.forEach((p, i) => { solution[p] = remainingTurrets[i]; });
+        }
+        Object.assign(assigned, solution);
+
         partToTurret = [assigned[0], assigned[1], assigned[2], assigned[3], assigned[4], assigned[5]];
         const body = [2, 3, 4, 5];
         shuffleArray(body);
@@ -2161,22 +2256,21 @@
       }
 
       if (selectedCharacter === 'laserkid') {
-        // 7 lives, 7 turrets (rotation 360/14 ≈ 25.71° — places turret 3 at the bottom for the hoverboard).
-        // Turret layout (25.71° rotation): 0=upper-right, 1=right-upper, 2=lower-right, 3=bottom, 4=lower-left, 5=left-upper, 6=upper-left.
-        // Head: random top turret (0 or 6). Torso: the other top turret.
-        // Hoverboard: bottom turret (3). Limbs: the remaining four side turrets.
-        const headTurret = Math.random() < 0.5 ? 0 : 6;
-        const torsoTurret = headTurret === 0 ? 6 : 0;
+        // 7 lives, 7 turrets (rotation 0° — turret 0 directly at the top, other 6 evenly around).
+        // Turret layout: 0=top, 1=upper-right, 2=right, 3=lower-right, 4=lower-left, 5=left, 6=upper-left.
+        // Top turret fires at the hair tuft (part 6). Head/torso split the two upper-side turrets.
+        const headTurret = Math.random() < 0.5 ? 1 : 6;
+        const torsoTurret = headTurret === 1 ? 6 : 1;
         partToTurret = [
-          headTurret,   // 0: head
-          torsoTurret,  // 1: torso
-          5,            // 2: L-arm  (left side)
-          1,            // 3: R-arm  (right side)
-          4,            // 4: L-leg  (lower-left)
-          2,            // 5: R-leg  (lower-right)
-          3,            // 6: hoverboard (bottom)
+          headTurret,   // 0: head (upper-right or upper-left)
+          torsoTurret,  // 1: torso (the other upper-side)
+          5,            // 2: L-arm (left)
+          2,            // 3: R-arm (right)
+          4,            // 4: L-leg (lower-left)
+          3,            // 5: R-leg (lower-right)
+          0,            // 6: hair tuft (top)
         ];
-        // All 6 non-head parts randomized (torso, limbs, hoverboard)
+        // All 6 non-head parts randomized (torso, limbs, hair)
         const body = [1, 2, 3, 4, 5, 6];
         shuffleArray(body);
         const order = body.map(p => ({ part: p, turret: partToTurret[p] }));
@@ -2289,22 +2383,21 @@
     }
 
     // === Laserkid (7 lives) ===
-    // 2/3 Laserman dimensions. No hair/cap — character has a hover board below the feet instead.
+    // 2/3 Laserman dimensions. Head tangent to the top of the torso line. Hair tuft at crown.
     function getLaserkidParts() {
-      // Laserman ref: head r=28 at (cx, cy-65); torso -37..+45 (length 82); arms 50 horizontal, 45 vertical;
-      // legs 45 horizontal, 60 vertical. We scale by 2/3 ≈ 0.667.
       const s = 2 / 3;
-      const hR = Math.round(28 * s);        // 19
+      const hR = Math.round(28 * s);     // 19
       const hCx = CENTER_X;
-      const hCy = CENTER_Y - Math.round(65 * s); // -43 from center
-      const tTop = hCy + hR - 4; // just below head
-      const tBot = tTop + Math.round(82 * s); // 55 long
+      // Torso placed first; head sits tangent to its top.
+      const tTop = CENTER_Y - Math.round(28 * s);  // ~-19 from center — similar height to Laserman's torso-top
+      const tBot = tTop + Math.round(82 * s);      // 55 long
+      const hCy = tTop - hR;                        // head bottom == torso top (tangent)
       const armDx = Math.round(50 * s); // 33
       const armUp = Math.round(45 * s); // 30
-      const armShoulderY = tTop;        // connect at top of torso
+      const armShoulderY = tTop;
       const legDx = Math.round(45 * s); // 30
       const legDy = Math.round(60 * s); // 40
-      const footY = tBot + legDy;       // foot y
+      const footY = tBot + legDy;
       return [
         { type: 'circle', cx: hCx, cy: hCy, r: hR },                                                     // 0: head
         { type: 'line', x1: CENTER_X, y1: tTop, x2: CENTER_X, y2: tBot },                                // 1: torso
@@ -2312,11 +2405,13 @@
         { type: 'line', x1: CENTER_X + armDx, y1: armShoulderY + armUp - 5, x2: CENTER_X, y2: armShoulderY }, // 3: right arm
         { type: 'line', x1: CENTER_X - legDx, y1: footY, x2: CENTER_X, y2: tBot },                        // 4: left leg
         { type: 'line', x1: CENTER_X + legDx, y1: footY, x2: CENTER_X, y2: tBot },                        // 5: right leg
-        // 6: hover board — horizontal ellipse just below the feet, touching them.
-        { type: 'hoverboard',
-          cx: hCx, cy: footY + 6,    // centered 6px below feet (top of board touches feet)
-          hw: 55,                     // half-width — wider than foot span
-          hh: 5 },                    // half-height
+        // 6: hair tuft — upper half-ellipse resting on the head crown, etched tip-to-base.
+        { type: 'hairTuft',
+          cx: hCx, cy: hCy - hR + 1,  // base center (just above head top)
+          hw: 13,                     // half-width
+          hh: 12,                     // height above head
+          x1: hCx, y1: hCy - hR - 12, // laser target: tip of tuft (top)
+          x2: hCx, y2: hCy - hR + 1 }, // trace end: base
       ];
     }
 
@@ -2327,7 +2422,7 @@
     // Legs are bent about 2/3 of the way down (upper segment heads outward, lower segment angles down).
     function getLaserbugParts() {
       const bodyCx = CENTER_X, bodyCy = CENTER_Y + 10, bodyR = 55;
-      const headR = 18;
+      const headR = 20; // 10% larger (was 18)
       const headCx = bodyCx;
       // Head sits tangent to body (head bottom touches body top)
       const headCy = bodyCy - bodyR - headR;
@@ -2430,12 +2525,11 @@
       const count = getMaxWrong();
       // Rotate turrets per character so bottom turret doesn't aim at crotch:
       //   Laserman/Laserwoman (6):   30° CW → places 0=upper-right, 5=upper-left
-      //   Laserkid (7):              360/14 ≈ 25.71° → turret 3 sits at the bottom (aims at hoverboard)
+      //   Laserkid (7):              0°     → turret 0 sits directly at the top (aims at hair tuft)
       //   Lasercat (9):              0°
       //   Laserbug (10):             0°     → places 0 at top (head) and 5 at bottom (body)
       let rotationDeg = 0;
       if (count === 6) rotationDeg = 30;
-      else if (count === 7) rotationDeg = 360 / 14;  // 25.71°, puts one turret exactly at bottom (90°)
       else if (count === 8) rotationDeg = 22.5; // legacy — unused now but safe
       const rotationRad = rotationDeg * Math.PI / 180;
       const positions = [];
@@ -2690,7 +2784,8 @@
     function drawTurretAt(x, y, state, time, idx, scale) {
       const isGreen = state === 'green';
       const isFiring = state === 'firing';
-      const color = isGreen ? COL.green : COL.red;
+      // For red theme, turrets render gray instead of the palette primary.
+      const color = isGreen ? (COL.turretGreen || COL.green) : COL.red;
       const pulse = 0.7 + 0.3 * Math.sin(time * 0.004 + idx * 1.2);
 
       // LOW: 2 concentric circles (ring + core), no shadow/glow, no save/restore
@@ -2942,7 +3037,7 @@
         }
         // Center dot
         if (progress > 0.5) {
-          const centerCol = style.eyeColor === COL.red ? '#ff8899' : '#ffffaa';
+          const centerCol = style.eyeColor === COL.red ? COL.traceCore : '#ffffaa';
           ctx.fillStyle = centerCol;
           ctx.shadowColor = centerCol;
           ctx.beginPath();
@@ -2972,16 +3067,21 @@
         ctx.beginPath();
         ctx.arc(part.cx, part.cy, part.r, startAngle, startAngle + Math.PI * 2 * progress);
         ctx.stroke();
-      } else if (part.type === 'hoverboard') {
-        // Expands from center outward horizontally (height stays constant after a bit).
+      } else if (part.type === 'hairTuft') {
+        // Upper half-ellipse on top of head. Etches from tip (top) downward to base.
+        // We draw a filled dome inside a clip rectangle that grows from the top down.
         const p = Math.min(1, progress);
-        const hw = part.hw * p;
-        const hh = part.hh * Math.min(1, p * 3); // grow height quickly then stay
-        if (hw > 1 && hh > 1) {
-          ctx.beginPath();
-          ctx.ellipse(part.cx, part.cy, hw, hh, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+        const topY = part.cy - part.hh;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(part.cx - part.hw - 4, topY, (part.hw + 4) * 2, part.hh * p);
+        ctx.clip();
+        ctx.fillStyle = style.color || COL.bodyGreen;
+        if (style.shadowBlur) { ctx.shadowBlur = style.shadowBlur; ctx.shadowColor = style.shadowColor || ctx.fillStyle; }
+        ctx.beginPath();
+        ctx.ellipse(part.cx, part.cy, part.hw, part.hh, 0, Math.PI, 0, false);
+        ctx.fill();
+        ctx.restore();
       }
       ctx.restore();
     }
@@ -2992,7 +3092,7 @@
         const isRed = bodyPartStates[idx] === 'red';
         const mainColor = isRed ? COL.bodyRed : COL.bodyGreen;
         const glowColor = isRed ? COL.redGlow : COL.greenGlow;
-        const coreColor = isRed ? '#ff8899' : COL.coreGreen;
+        const coreColor = isRed ? COL.traceCore : COL.coreGreen;
         const eyeColor = isRed ? COL.red : COL.green;
 
         // Main glow
@@ -3051,7 +3151,7 @@
       const backfill = lwHeadBackfill;
       if (backfill && parts[0] && parts[0].type === 'circle') {
         drawBodyPartShape(parts[0], Math.min(1, backfill.progress), {
-          color: '#ff6677', lineWidth: 5, shadowBlur: 25, shadowColor: COL.red, eyeColor: COL.red,
+          color: COL.traceBright, lineWidth: 5, shadowBlur: 25, shadowColor: COL.red, eyeColor: COL.red,
         });
       }
       // 5) Flower (on top of head for Laserwoman — via accessory)
@@ -3154,7 +3254,7 @@
         ctx.fill();
       }
       // Center dot
-      const centerCol = redP >= 0.5 ? '#ff8899' : '#ffffaa';
+      const centerCol = redP >= 0.5 ? COL.traceCore : '#ffffaa';
       ctx.fillStyle = centerCol;
       ctx.shadowColor = centerCol;
       ctx.beginPath();
@@ -3340,10 +3440,10 @@
         // Start at the tip / outer endpoint (x1)
         targetX = part.x1;
         targetY = part.y1;
-      } else if (part.type === 'hoverboard') {
-        // Bottom turret fires straight up at the hoverboard's bottom-center; etching grows outward from center.
-        targetX = part.cx;
-        targetY = part.cy + part.hh;
+      } else if (part.type === 'hairTuft') {
+        // Top turret fires straight down onto the tip of the tuft; etching grows tip-to-base.
+        targetX = part.x1;
+        targetY = part.y1;
       } else {
         // Lines / hair / ears / flower etc.: target start endpoint (tip)
         targetX = part.x1;
@@ -3478,12 +3578,11 @@
               px = part.tipX + (part.baseInX - part.tipX) * tp;
               py = part.tipY + (part.baseInY - part.tipY) * tp;
             }
-          } else if (part.type === 'hoverboard') {
-            // Grows from center outward — emit particles near the expanding edge
+          } else if (part.type === 'hairTuft') {
+            // Particles emerge from the moving etch front (top → down)
             const p = laserAnim.traceProgress;
-            const side = Math.random() < 0.5 ? -1 : 1;
-            px = part.cx + side * part.hw * p;
-            py = part.cy + (Math.random() - 0.5) * part.hh * 2;
+            px = part.cx + (Math.random() - 0.5) * part.hw;
+            py = (part.cy - part.hh) + part.hh * p;
           } else {
             px = part.x1 + (part.x2 - part.x1) * laserAnim.traceProgress;
             py = part.y1 + (part.y2 - part.y1) * laserAnim.traceProgress;
@@ -3631,11 +3730,12 @@
         const sx = Math.sin(t * freq) * amp;
         const sy = Math.cos(t * freq * 1.3) * amp * 0.7;
 
-        // Interpolate color: selected palette → red(255,0,68)
+        // Interpolate color: selected palette → red (or gray in red theme so turret stays gray)
         const pal = COLOR_PALETTES[selectedColor] || COLOR_PALETTES.green;
-        const r = Math.round(pal.rgb[0] + (255 - pal.rgb[0]) * gtr);
-        const g = Math.round(pal.rgb[1] * (1 - gtr));
-        const b = Math.round(pal.rgb[2] + (68 - pal.rgb[2]) * gtr);
+        const target = grayLaserMode ? [85, 85, 85] : [255, 0, 68];
+        const r = Math.round(pal.rgb[0] + (target[0] - pal.rgb[0]) * gtr);
+        const g = Math.round(pal.rgb[1] + (target[1] - pal.rgb[1]) * gtr);
+        const b = Math.round(pal.rgb[2] + (target[2] - pal.rgb[2]) * gtr);
         const color = `rgb(${r},${g},${b})`;
 
         // Draw shaking turret dots (overrides normal turret draw)
@@ -3759,7 +3859,7 @@
           ctx.clip();
         }
         drawBodyPartShape(laserAnim.part, laserAnim.traceProgress, {
-          color: '#ff6677',
+          color: COL.traceBright,
           lineWidth: 5,
           shadowBlur: 25,
           shadowColor: COL.red,
@@ -3774,7 +3874,7 @@
             const isRd = bodyPartStates[idx] === 'red';
             const mc = isRd ? COL.bodyRed : COL.bodyGreen;
             const gc = isRd ? COL.redGlow : COL.greenGlow;
-            const cc = isRd ? '#ff8899' : COL.coreGreen;
+            const cc = isRd ? COL.traceCore : COL.coreGreen;
             const ec = isRd ? COL.red : COL.green;
             drawBodyPartShape(p, 1, { color: mc, lineWidth: 4, shadowBlur: 18, shadowColor: gc, eyeColor: ec });
             drawBodyPartShape(p, 1, { color: cc, lineWidth: 2, shadowBlur: 8, shadowColor: mc, alpha: 0.7, eyeColor: ec });
@@ -3816,10 +3916,9 @@
           const tp = laserAnim.traceProgress;
           tipX = p.tipX + (p.baseOutX - p.tipX) * tp;
           tipY = p.tipY + (p.baseOutY - p.tipY) * tp;
-        } else if (p.type === 'hoverboard') {
-          const side = laserAnim.traceProgress < 0.5 ? -1 : 1;
-          tipX = p.cx + side * p.hw * laserAnim.traceProgress;
-          tipY = p.cy;
+        } else if (p.type === 'hairTuft') {
+          tipX = p.cx;
+          tipY = (p.cy - p.hh) + p.hh * laserAnim.traceProgress;
         } else {
           tipX = p.x1 + (p.x2 - p.x1) * laserAnim.traceProgress;
           tipY = p.y1 + (p.y2 - p.y1) * laserAnim.traceProgress;
@@ -3858,8 +3957,9 @@
         smileCy = CENTER_Y - Math.round(65 * s) - 1;
         smileR = 9;
       } else if (selectedCharacter === 'laserbug') {
-        smileCy = CENTER_Y + 10 - 55 - 18 + 4;  // match bug head cy
-        smileR = 8;
+        // New head cy = CENTER_Y - 65 (headR=20, tangent). Smile slightly above head center.
+        smileCy = CENTER_Y - 66;
+        smileR = 9;
       } else {
         smileCy = CENTER_Y - 65 - 2;
         smileR = 14;
@@ -3885,8 +3985,8 @@
         return { left: { x: hCx - 6, y: kHCy - 5, r: 2 }, right: { x: hCx + 6, y: kHCy - 5, r: 2 } };
       }
       if (selectedCharacter === 'laserbug') {
-        const bHCy = CENTER_Y + 10 - 55 - 18 + 4; // match laserbug head.cy
-        return { left: { x: hCx - 5, y: bHCy - 2, r: 2 }, right: { x: hCx + 5, y: bHCy - 2, r: 2 } };
+        const bHCy = CENTER_Y + 10 - 55 - 20; // match laserbug head cy (headR=20, tangent)
+        return { left: { x: hCx - 6, y: bHCy - 3, r: 2 }, right: { x: hCx + 6, y: bHCy - 3, r: 2 } };
       }
       return { left: { x: hCx - 9, y: hCy - 7, r: 2.5 }, right: { x: hCx + 9, y: hCy - 7, r: 2.5 } };
     }
@@ -3902,9 +4002,9 @@
         return features;
       }
       if (selectedCharacter === 'laserbug') {
-        const bHCy = CENTER_Y + 10 - 55 - 18 + 4;
-        features.push({ type: 'eye', x: hCx - 5, y: bHCy - 2, r: 2 });
-        features.push({ type: 'eye', x: hCx + 5, y: bHCy - 2, r: 2 });
+        const bHCy = CENTER_Y + 10 - 55 - 20;
+        features.push({ type: 'eye', x: hCx - 6, y: bHCy - 3, r: 2 });
+        features.push({ type: 'eye', x: hCx + 6, y: bHCy - 3, r: 2 });
         return features;
       }
       if (selectedCharacter === 'lasercat') {
@@ -3947,8 +4047,9 @@
         frownCy = CENTER_Y - Math.round(65 * s) + 12;
         frownR = 9;
       } else if (selectedCharacter === 'laserbug') {
-        frownCy = CENTER_Y + 10 - 55 - 18 + 4 + 12;
-        frownR = 8;
+        // Move frown up a bit — sits centered on the upper face so the sad arc curves above it
+        frownCy = CENTER_Y - 54;
+        frownR = 9;
       } else {
         frownCy = CENTER_Y - 65 + 18;
         frownR = 14;
@@ -4339,11 +4440,12 @@
         const feature = frownAnim.features[fi];
         const progress = frownAnim.featureProgress;
 
-        // Feature color transitions selected→red; beams are always red
+        // Feature color transitions selected→red (or →gray in red theme)
         const pal = COLOR_PALETTES[selectedColor] || COLOR_PALETTES.green;
-        const fr = Math.round(pal.rgb[0] + (255 - pal.rgb[0]) * progress);
-        const fg = Math.round(pal.rgb[1] * (1 - progress));
-        const fb = Math.round(pal.rgb[2] + (68 - pal.rgb[2]) * progress);
+        const targetFX = grayLaserMode ? [85, 85, 85] : [255, 0, 68];
+        const fr = Math.round(pal.rgb[0] + (targetFX[0] - pal.rgb[0]) * progress);
+        const fg = Math.round(pal.rgb[1] + (targetFX[1] - pal.rgb[1]) * progress);
+        const fb = Math.round(pal.rgb[2] + (targetFX[2] - pal.rgb[2]) * progress);
         const featureColor = `rgb(${fr}, ${fg}, ${fb})`;
         const beamAlpha = 0.3 + 0.5 * progress;
 
@@ -4631,8 +4733,9 @@
       const lines = text.split('<br>');
       msgTop.innerHTML = lines[0] || '';
       msgBottom.innerHTML = lines.slice(1).join('<br>') || '';
-      msgTop.className = 'msg-line ' + type;
-      msgBottom.className = 'msg-line ' + type;
+      const extra = (type === 'lose' && grayFailMode) ? ' gray-fail' : '';
+      msgTop.className = 'msg-line ' + type + extra;
+      msgBottom.className = 'msg-line ' + type + extra;
       overlay.classList.add(type + '-layout');
       overlay.classList.add('show');
     }
