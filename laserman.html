@@ -3587,7 +3587,10 @@
       if (laserAnim.phase === 'fireUp') {
         laserAnim.shakeTime = (laserAnim.shakeTime || 0) + 0.017 * _dtScale;
         const level = laserAnim.shakeLevel || 1;
-        const duration = (1.5 + 0.5 * level) / 4; // 0.5s (level 1), 0.625s (level 2), 0.75s (level 3)
+        // level 1: 0.5s (3rd-to-last shot)
+        // level 2: 0.9375s — 0.625s × 1.5 (2nd-to-last shot, +50% dramatic lead-up)
+        // level 3: 1.5s — 0.75s × 2 (final shot, doubled for maximum drama)
+        const duration = level === 3 ? 1.5 : level === 2 ? 0.9375 : 0.5;
         const progress = Math.min(1, laserAnim.shakeTime / duration);
         laserAnim.greenToRed = progress;
         laserAnim.shakeProgress = progress;
