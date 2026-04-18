@@ -2156,6 +2156,8 @@
     // Body parts: 0=head, 1=torso, 2=left-arm, 3=right-arm, 4=left-leg, 5=right-leg
     let shotOrder = [];
     let hairFromRight = false; // true = turret on right hits hair, animate right-to-left
+    // For Laserkid: which side the yo-yo hangs ('left' or 'right'). Decided each round in generateShotOrder.
+    let laserkidYoyoSide = 'right';
     // Final-combo mode for Laserwoman/Laserkid ('A'|'B'|'C'|'D'), chosen in generateShotOrder
     let finalComboMode = 'A';
     // Secondary-phase animation state for combo characters (post-primary trace)
@@ -2260,19 +2262,33 @@
       if (selectedCharacter === 'laserkid') {
         // 7 lives, 7 turrets (rotation 0° — turret 0 directly at the top, other 6 evenly around).
         // Turret layout: 0=top, 1=upper-right, 2=right, 3=lower-right, 4=lower-left, 5=left, 6=upper-left.
-        // Top turret fires at the hair tuft (part 6). Head/torso split the two upper-side turrets.
-        const headTurret = Math.random() < 0.5 ? 1 : 6;
-        const torsoTurret = headTurret === 1 ? 6 : 1;
-        partToTurret = [
-          headTurret,   // 0: head (upper-right or upper-left)
-          torsoTurret,  // 1: torso (the other upper-side)
-          5,            // 2: L-arm (left)
-          2,            // 3: R-arm (right)
-          4,            // 4: L-leg (lower-left)
-          3,            // 5: R-leg (lower-right)
-          0,            // 6: hair tuft (top)
-        ];
-        // All 6 non-head parts randomized (torso, limbs, hair)
+        // Head: top turret (0). Yo-yo hangs below one hand (random left/right each round);
+        // the side turret on that side hits the yo-yo.
+        laserkidYoyoSide = Math.random() < 0.5 ? 'left' : 'right';
+        if (laserkidYoyoSide === 'left') {
+          // Yo-yo on left → turret 5 (left) hits it. Reshuffle upper turrets for torso/arms.
+          partToTurret = [
+            0,  // 0: head (top)
+            1,  // 1: torso (upper-right)
+            6,  // 2: L-arm (upper-left, since left side is taken by yo-yo)
+            2,  // 3: R-arm (right)
+            4,  // 4: L-leg (lower-left)
+            3,  // 5: R-leg (lower-right)
+            5,  // 6: yo-yo (left)
+          ];
+        } else {
+          // Yo-yo on right → turret 2 (right) hits it.
+          partToTurret = [
+            0,  // 0: head (top)
+            6,  // 1: torso (upper-left)
+            5,  // 2: L-arm (left)
+            1,  // 3: R-arm (upper-right)
+            4,  // 4: L-leg (lower-left)
+            3,  // 5: R-leg (lower-right)
+            2,  // 6: yo-yo (right)
+          ];
+        }
+        // All 6 non-head parts randomized (torso, limbs, yo-yo)
         const body = [1, 2, 3, 4, 5, 6];
         shuffleArray(body);
         const order = body.map(p => ({ part: p, turret: partToTurret[p] }));
@@ -2407,35 +2423,23 @@
         { type: 'line', x1: CENTER_X + armDx, y1: armShoulderY + armUp - 5, x2: CENTER_X, y2: armShoulderY }, // 3: right arm
         { type: 'line', x1: CENTER_X - legDx, y1: footY, x2: CENTER_X, y2: tBot },                        // 4: left leg
         { type: 'line', x1: CENTER_X + legDx, y1: footY, x2: CENTER_X, y2: tBot },                        // 5: right leg
-        // 6: spiky super-saiyan hair — zig-zag polygon atop the head, etched top-to-base.
+        // 6: yo-yo — a small disk on a string hanging below the left or right hand.
+        //   Hand position is the outer endpoint of the arm (x1,y1 of arm part).
+        //   laserkidYoyoSide ('left'|'right') picks which hand it hangs from each round.
         (function() {
-          const cx = hCx, cy = hCy - hR + 2;  // base-line sits 2px inside head top
-          // Polygon path (left to right): valleys at dy >= 0, tips at dy < 0.
-          const points = [
-            { dx: -20, dy: 2 },    // leftmost base (slightly inside head)
-            { dx: -16, dy: -13 },  // spike 1
-            { dx: -12, dy: -1 },   // valley
-            { dx: -7,  dy: -22 },  // spike 2
-            { dx: -3,  dy: -3 },   // valley
-            { dx: 1,   dy: -28 },  // spike 3 — tallest
-            { dx: 5,   dy: -4 },   // valley
-            { dx: 10,  dy: -20 },  // spike 4
-            { dx: 14,  dy: -1 },   // valley
-            { dx: 18,  dy: -15 },  // spike 5
-            { dx: 22,  dy: 2 },    // rightmost base
-          ];
-          let minDy = Infinity, maxDy = -Infinity, tipDx = 0, tipDy = 0;
-          for (const p of points) {
-            if (p.dy < minDy) { minDy = p.dy; tipDx = p.dx; tipDy = p.dy; }
-            if (p.dy > maxDy) maxDy = p.dy;
-          }
-          return { type: 'spikeHair',
-            cx: cx, cy: cy,
-            points,
-            topOffset: minDy,          // -28
-            heightTotal: maxDy - minDy, // 30
-            x1: cx + tipDx, y1: cy + tipDy,   // laser target: tallest tip
-            x2: cx, y2: cy };                 // trace end (base)
+          const sideSign = laserkidYoyoSide === 'left' ? -1 : 1;
+          const handX = CENTER_X + sideSign * armDx;       // matches arm tip x
+          const handY = armShoulderY + armUp - 5;          // matches arm tip y
+          const stringLen = 26;
+          const ballR = 7;
+          const ballX = handX;
+          const ballY = handY + stringLen + ballR;         // ball center below hand
+          return { type: 'yoyo',
+            anchorX: handX, anchorY: handY,   // top of string (at hand)
+            ballX: ballX, ballY: ballY, ballR: ballR,
+            // x1/y1: default target (overridden in setupBeamFromBlink to closest-point on ball)
+            x1: ballX, y1: ballY,
+            x2: handX, y2: handY };
         })(),
       ];
     }
@@ -2954,12 +2958,12 @@
               ctx.stroke();
             }
           } else if (selectedCharacter === 'laserbug') {
-            // Ladybug head (r=20): two small beady dots in the UPPER half of the face.
+            // Ladybug head (r=20): two small beady dots in the upper half of the face.
             ctx.beginPath();
-            ctx.arc(part.cx - 6, part.cy - 10, 2, 0, Math.PI * 2);
+            ctx.arc(part.cx - 6, part.cy - 8, 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(part.cx + 6, part.cy - 10, 2, 0, Math.PI * 2);
+            ctx.arc(part.cx + 6, part.cy - 8, 2, 0, Math.PI * 2);
             ctx.fill();
           } else if (selectedCharacter === 'laserkid') {
             // Kid: eyes scaled 2/3
@@ -3092,25 +3096,37 @@
         ctx.beginPath();
         ctx.arc(part.cx, part.cy, part.r, startAngle, startAngle + Math.PI * 2 * progress);
         ctx.stroke();
-      } else if (part.type === 'spikeHair') {
-        // Super-saiyan spikes on top of head. Etches tip-down via a clip rect.
+      } else if (part.type === 'yoyo') {
+        // Yo-yo: string from hand (anchor) to a small disk (ball). Two-phase etching:
+        //   0..0.5 → ball arc traces clockwise from the turret-contact angle
+        //   0.5..1 → string traces from ball-top upward to the anchor (hand)
         const p = Math.min(1, progress);
-        const topY = part.cy + part.topOffset;
-        ctx.save();
+        const startAngle = part.startAngle !== undefined ? part.startAngle : -Math.PI / 2;
+        // Ball arc
+        const ballP = Math.min(1, p * 2);
         ctx.beginPath();
-        ctx.rect(part.cx - 28, topY, 56, part.heightTotal * p);
-        ctx.clip();
-        ctx.fillStyle = style.color || COL.bodyGreen;
-        if (style.shadowBlur) { ctx.shadowBlur = style.shadowBlur; ctx.shadowColor = style.shadowColor || ctx.fillStyle; }
-        ctx.beginPath();
-        for (let i = 0; i < part.points.length; i++) {
-          const px = part.cx + part.points[i].dx;
-          const py = part.cy + part.points[i].dy;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        ctx.arc(part.ballX, part.ballY, part.ballR, startAngle, startAngle + Math.PI * 2 * ballP);
+        ctx.stroke();
+        // Inner detail dot (yo-yo axle) once the ball is fully drawn
+        if (ballP >= 1) {
+          ctx.save();
+          ctx.fillStyle = style.color || COL.bodyGreen;
+          ctx.beginPath();
+          ctx.arc(part.ballX, part.ballY, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
+        // String
+        if (p > 0.5) {
+          const stringP = (p - 0.5) * 2;
+          const topY = part.ballY - part.ballR;
+          const endX = part.ballX + (part.anchorX - part.ballX) * stringP;
+          const endY = topY + (part.anchorY - topY) * stringP;
+          ctx.beginPath();
+          ctx.moveTo(part.ballX, topY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
@@ -3209,15 +3225,34 @@
       _drawTrapezoidHairWithFill(g, lwHairAnim, /*headCy*/ CENTER_Y - 65, /*headR*/ 30);
     }
     // Shared renderer for the hair trapezoid. Draws green base layer, then red overlay based on anim.
+    // ONCE the hair is fully zapped (fillProgress >= 1), drops the green base entirely so the halo
+    // is red (or gray for red theme). Before that, the usual green+red-overlay transition animates.
     function _drawTrapezoidHairWithFill(g, anim, headCy, clipR) {
-      // Clip behind head so hair doesn't cover the face
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       ctx.arc(g.cx, headCy, clipR, 0, Math.PI * 2, true);
       ctx.clip();
 
-      // 1) Green base layer: always drawn at full size
+      const fullyZapped = anim && anim.fillProgress >= 1;
+
+      if (fullyZapped) {
+        // Post-zap: draw the whole hair red with red glow ONLY — no green base, so the halo is red.
+        ctx.fillStyle = COL.bodyRed;
+        ctx.shadowBlur = 22;
+        ctx.shadowColor = COL.redGlow;
+        ctx.beginPath();
+        ctx.moveTo(g.cx - g.botHW, g.botY);
+        ctx.lineTo(g.cx + g.botHW, g.botY);
+        ctx.lineTo(g.cx + g.topHW, g.topY);
+        ctx.lineTo(g.cx - g.topHW, g.topY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      // Still in the "alive" or "being zapped" state — palette green base + optional red overlay.
       ctx.fillStyle = COL.bodyGreen;
       ctx.shadowBlur = 18;
       ctx.shadowColor = COL.greenGlow;
@@ -3229,7 +3264,6 @@
       ctx.closePath();
       ctx.fill();
 
-      // 2) Red overlay based on anim state
       if (anim && anim.fillProgress > 0) {
         const p = Math.min(1, anim.fillProgress);
         ctx.fillStyle = COL.bodyRed;
@@ -3237,15 +3271,12 @@
         ctx.shadowColor = COL.redGlow;
         let fillTopY, fillBotY;
         if (anim.fillDir === 'bot2top') {
-          // Red fills from bottom up
           fillBotY = g.botY;
           fillTopY = g.botY - (g.botY - g.topY) * p;
         } else {
-          // Red fills from top down
           fillTopY = g.topY;
           fillBotY = g.topY + (g.botY - g.topY) * p;
         }
-        // Compute half-widths at those y positions (linear interp between topHW at topY and botHW at botY)
         function hwAt(y) {
           const t = (y - g.topY) / (g.botY - g.topY);
           return g.topHW + (g.botHW - g.topHW) * t;
@@ -3293,10 +3324,11 @@
     }
 
     // Laserbug spots.
-    //   - Spots START filled in the chosen palette color (palette primary).
-    //   - Before the body is etched, the border is a subtle dark outline (like a real ladybug).
-    //   - AFTER the body is hit, the border switches to red (or gray for red theme) as a damage cue.
-    //   - During the win/lose animation, laserbugSpotState overlays a growing color fill from center.
+    //   - Spots are HOLLOW by default (just an outlined circle on the body).
+    //   - Border is a subtle dark outline before the body is etched; switches to red
+    //     (or gray for the red theme) once the body is hit — a damage cue.
+    //   - Only during the win/lose animation does laserbugSpotState paint a growing
+    //     color fill from the spot's center.
     function drawLaserbugSpots() {
       const spots = getLaserbugSpots();
       const bodyIsRed = bodyPartStates[1] === 'red';
@@ -3304,15 +3336,7 @@
         const state = laserbugSpotState[idx] || { progress: 0, color: 'green' };
         ctx.save();
 
-        // 1. Base fill — palette (chosen) color. Always visible.
-        ctx.fillStyle = COL.bodyGreen;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = COL.greenGlow;
-        ctx.beginPath();
-        ctx.arc(spot.cx, spot.cy, spot.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 2. Win/lose overlay — fills from center in the animation color.
+        // Win/lose fill (only when animating).
         if (state.progress > 0) {
           const fillCol = state.color === 'green' ? COL.bodyGreen : COL.bodyRed;
           const glowCol = state.color === 'green' ? COL.greenGlow : COL.redGlow;
@@ -3324,7 +3348,7 @@
           ctx.fill();
         }
 
-        // 3. Border — subtle dark outline initially; switches to red (or gray in red theme) once the body has been etched.
+        // Border — dark outline by default, red/gray after body hit.
         if (bodyIsRed) {
           ctx.strokeStyle = COL.bodyRed;
           ctx.shadowBlur = 6;
@@ -3490,10 +3514,14 @@
         // Start at the tip / outer endpoint (x1)
         targetX = part.x1;
         targetY = part.y1;
-      } else if (part.type === 'spikeHair') {
-        // Top turret fires down onto the tallest spike; etching grows top-to-base.
-        targetX = part.x1;
-        targetY = part.y1;
+      } else if (part.type === 'yoyo') {
+        // Yo-yo: closest point on the ball (circle) to the firing turret; arc sweeps from there.
+        const dx = turret.x - part.ballX;
+        const dy = turret.y - part.ballY;
+        const d = Math.hypot(dx, dy) || 1;
+        targetX = part.ballX + (dx / d) * part.ballR;
+        targetY = part.ballY + (dy / d) * part.ballR;
+        part.startAngle = Math.atan2(dy, dx);
       } else {
         // Lines / hair / ears / flower etc.: target start endpoint (tip)
         targetX = part.x1;
@@ -3628,11 +3656,21 @@
               px = part.tipX + (part.baseInX - part.tipX) * tp;
               py = part.tipY + (part.baseInY - part.tipY) * tp;
             }
-          } else if (part.type === 'spikeHair') {
-            // Particles emerge from the advancing etch front (top → down)
+          } else if (part.type === 'yoyo') {
             const p = laserAnim.traceProgress;
-            px = part.cx + (Math.random() - 0.5) * 44;
-            py = (part.cy + part.topOffset) + part.heightTotal * p;
+            if (p <= 0.5) {
+              // Ball-arc phase — sparks on the circumference
+              const startA = part.startAngle !== undefined ? part.startAngle : -Math.PI / 2;
+              const angle = startA + Math.PI * 2 * (p * 2);
+              px = part.ballX + Math.cos(angle) * part.ballR;
+              py = part.ballY + Math.sin(angle) * part.ballR;
+            } else {
+              // String phase — sparks travel up the string
+              const sp = (p - 0.5) * 2;
+              const topY = part.ballY - part.ballR;
+              px = part.ballX + (part.anchorX - part.ballX) * sp;
+              py = topY + (part.anchorY - topY) * sp;
+            }
           } else {
             px = part.x1 + (part.x2 - part.x1) * laserAnim.traceProgress;
             py = part.y1 + (part.y2 - part.y1) * laserAnim.traceProgress;
@@ -3966,9 +4004,19 @@
           const tp = laserAnim.traceProgress;
           tipX = p.tipX + (p.baseOutX - p.tipX) * tp;
           tipY = p.tipY + (p.baseOutY - p.tipY) * tp;
-        } else if (p.type === 'spikeHair') {
-          tipX = p.cx;
-          tipY = (p.cy + p.topOffset) + p.heightTotal * laserAnim.traceProgress;
+        } else if (p.type === 'yoyo') {
+          const tp = laserAnim.traceProgress;
+          if (tp <= 0.5) {
+            const startA = p.startAngle !== undefined ? p.startAngle : -Math.PI / 2;
+            const angle = startA + Math.PI * 2 * (tp * 2);
+            tipX = p.ballX + Math.cos(angle) * p.ballR;
+            tipY = p.ballY + Math.sin(angle) * p.ballR;
+          } else {
+            const sp = (tp - 0.5) * 2;
+            const topY = p.ballY - p.ballR;
+            tipX = p.ballX + (p.anchorX - p.ballX) * sp;
+            tipY = topY + (p.anchorY - topY) * sp;
+          }
         } else {
           tipX = p.x1 + (p.x2 - p.x1) * laserAnim.traceProgress;
           tipY = p.y1 + (p.y2 - p.y1) * laserAnim.traceProgress;
@@ -4042,8 +4090,7 @@
       }
       if (selectedCharacter === 'laserbug') {
         const bHCy = CENTER_Y + 10 - 55 - 20; // match laserbug head cy (headR=20, tangent)
-        // Eyes sit in the upper portion of the head (r=20), well above center.
-        return { left: { x: hCx - 6, y: bHCy - 10, r: 2 }, right: { x: hCx + 6, y: bHCy - 10, r: 2 } };
+        return { left: { x: hCx - 6, y: bHCy - 8, r: 2 }, right: { x: hCx + 6, y: bHCy - 8, r: 2 } };
       }
       return { left: { x: hCx - 9, y: hCy - 7, r: 2.5 }, right: { x: hCx + 9, y: hCy - 7, r: 2.5 } };
     }
@@ -4062,8 +4109,8 @@
       }
       if (selectedCharacter === 'laserbug') {
         const bHCy = CENTER_Y + 10 - 55 - 20;
-        features.push({ type: 'eye', x: hCx - 6, y: bHCy - 10, r: 2 });
-        features.push({ type: 'eye', x: hCx + 6, y: bHCy - 10, r: 2 });
+        features.push({ type: 'eye', x: hCx - 6, y: bHCy - 8, r: 2 });
+        features.push({ type: 'eye', x: hCx + 6, y: bHCy - 8, r: 2 });
         return features;
       }
       if (selectedCharacter === 'lasercat') {
